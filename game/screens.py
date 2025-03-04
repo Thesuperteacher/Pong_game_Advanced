@@ -91,7 +91,7 @@ class StartScreen:
         
         # Create animated balls for the background
         self.balls = []
-        for _ in range(5):
+        for _ in range(20):
             radius = random.randint(5, 15)
             x = random.randint(radius, SCREEN_WIDTH - radius)
             y = random.randint(radius, SCREEN_HEIGHT - radius)
