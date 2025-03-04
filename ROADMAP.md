@@ -39,21 +39,21 @@ Create a folder (e.g., PongGame) with separate modules or files for the main loo
 
 ---
 
-### 5. **Implement Basic Collision & Physics**
+<!-- ### 5. **Implement Basic Collision & Physics**
 - **Wall & Paddle Collisions:**  
   - Reverse ball direction on hitting screen edges.
   - Detect collision with paddles and adjust the ball's velocity.
 - **Dynamic Ball Speed:**  
   Optionally, slightly increase speed after each hit for added challenge.
 
----
-
+--- -->
+<!-- 
 ### 6. **Add the Paddle "Loading Bar" Mechanic**
 - **Hit Counter:**  
   - Each time the ball hits a paddle, increment a counter.
   - Once a paddle registers 5 hits, mark its loading bar as "fully loaded."
 - **Visual Bar:**  
-  Draw a small bar or rectangle beside each paddle that visually fills up to indicate progress.
+  Draw a small bar or rectangle beside each paddle that visually fills up to indicate progress. -->
 
 ---
 

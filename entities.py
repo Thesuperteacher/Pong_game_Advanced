@@ -5,6 +5,7 @@ This module contains the Paddle and Ball classes.
 
 import pygame
 import random
+import math
 
 class Paddle:
     """
@@ -18,6 +19,18 @@ class Paddle:
         self.load_counter = 0  # Counter for the hit bar power-up
         self.max_load = 100    # Maximum load value
         self.is_powered_up = False  # Flag to indicate if power-up is active
+        
+        # Hold and throw feature
+        self.is_holding_ball = False
+        self.arrow_angle = 0  # Angle in degrees
+        self.arrow_length = 50  # Length of the arrow
+        self.is_left_paddle = x < 400  # Determine if this is the left paddle
+        
+        # Set initial arrow angle based on paddle position
+        if self.is_left_paddle:
+            self.arrow_angle = 0  # Point right for left paddle
+        else:
+            self.arrow_angle = 180  # Point left for right paddle
         
     def move(self, direction, screen_height):
         """Move the paddle up or down within screen boundaries"""
@@ -35,6 +48,72 @@ class Paddle:
         if self.load_counter >= self.max_load:
             self.is_powered_up = True
             self.load_counter = 0
+            return True
+        return False
+    
+    def hold_ball(self, ball):
+        """Hold the ball if power-up is active and ball is in contact"""
+        if self.is_powered_up and ball.rect.colliderect(self.rect):
+            self.is_holding_ball = True
+            self.is_powered_up = False
+            
+            # Set the ball's held flag
+            ball.is_held = True
+            
+            # Position the ball at the edge of the paddle
+            if self.is_left_paddle:
+                ball.x = self.rect.right + ball.radius
+            else:
+                ball.x = self.rect.left - ball.radius
+                
+            ball.y = self.rect.centery
+            
+            # Update ball's rect
+            ball.rect.x = ball.x - ball.radius
+            ball.rect.y = ball.y - ball.radius
+            
+            # Stop the ball's movement
+            ball.speed_x = 0
+            ball.speed_y = 0
+            
+            return True
+        return False
+    
+    def rotate_arrow(self, direction):
+        """Rotate the arrow indicator"""
+        rotation_speed = 5  # Degrees per frame
+        
+        if direction == "clockwise":
+            self.arrow_angle += rotation_speed
+        else:  # counterclockwise
+            self.arrow_angle -= rotation_speed
+            
+        # Constrain the angle to point forward (toward opponent's side)
+        if self.is_left_paddle:
+            # Left paddle: constrain to -90 to 90 degrees (pointing right hemisphere)
+            self.arrow_angle = max(-90, min(90, self.arrow_angle))
+        else:
+            # Right paddle: constrain to 90 to 270 degrees (pointing left hemisphere)
+            if self.arrow_angle < 90:
+                self.arrow_angle = 90
+            elif self.arrow_angle > 270:
+                self.arrow_angle = 270
+    
+    def throw_ball(self, ball):
+        """Throw the ball in the direction of the arrow"""
+        if self.is_holding_ball:
+            self.is_holding_ball = False
+            
+            # Release the ball
+            ball.is_held = False
+            
+            # Calculate the ball's new velocity based on arrow angle
+            angle_radians = math.radians(self.arrow_angle)
+            speed = 10  # Base speed for the throw
+            
+            ball.speed_x = speed * math.cos(angle_radians)
+            ball.speed_y = speed * math.sin(angle_radians)
+            
             return True
         return False
             
@@ -60,6 +139,37 @@ class Paddle:
             pygame.draw.rect(screen, load_color, 
                             (load_bar_x, load_bar_y, 
                              int(load_bar_width * load_percentage), load_bar_height))
+        
+        # Draw the arrow indicator if holding the ball
+        if self.is_holding_ball:
+            # Calculate arrow start point (center of paddle edge)
+            if self.is_left_paddle:
+                start_x = self.rect.right
+            else:
+                start_x = self.rect.left
+            start_y = self.rect.centery
+            
+            # Calculate arrow end point based on angle
+            angle_radians = math.radians(self.arrow_angle)
+            end_x = start_x + self.arrow_length * math.cos(angle_radians)
+            end_y = start_y + self.arrow_length * math.sin(angle_radians)
+            
+            # Draw the arrow line
+            pygame.draw.line(screen, (255, 255, 0), (start_x, start_y), (end_x, end_y), 3)
+            
+            # Draw arrowhead
+            arrowhead_length = 10
+            arrowhead_angle1 = angle_radians + math.radians(150)
+            arrowhead_angle2 = angle_radians - math.radians(150)
+            
+            arrowhead_x1 = end_x + arrowhead_length * math.cos(arrowhead_angle1)
+            arrowhead_y1 = end_y + arrowhead_length * math.sin(arrowhead_angle1)
+            
+            arrowhead_x2 = end_x + arrowhead_length * math.cos(arrowhead_angle2)
+            arrowhead_y2 = end_y + arrowhead_length * math.sin(arrowhead_angle2)
+            
+            pygame.draw.line(screen, (255, 255, 0), (end_x, end_y), (arrowhead_x1, arrowhead_y1), 3)
+            pygame.draw.line(screen, (255, 255, 0), (end_x, end_y), (arrowhead_x2, arrowhead_y2), 3)
 
 
 class Ball:
@@ -76,21 +186,24 @@ class Ball:
         self.color = color
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
         self.max_speed = 15  # Maximum ball speed
+        self.is_held = False  # Flag to indicate if the ball is being held
         
     def update(self, screen_width, screen_height):
         """Update ball position and handle wall collisions"""
-        self.x += self.speed_x
-        self.y += self.speed_y
-        
-        # Update the rect position
-        self.rect.x = self.x - self.radius
-        self.rect.y = self.y - self.radius
-        
-        # Top and bottom wall collisions
-        if self.y <= self.radius or self.y >= screen_height - self.radius:
-            self.speed_y *= -1
-            # Add a small random variation to make gameplay more interesting
-            self.speed_y += random.uniform(-0.5, 0.5)
+        # Only update if not being held
+        if not self.is_held:
+            self.x += self.speed_x
+            self.y += self.speed_y
+            
+            # Update the rect position
+            self.rect.x = self.x - self.radius
+            self.rect.y = self.y - self.radius
+            
+            # Top and bottom wall collisions
+            if self.y <= self.radius or self.y >= screen_height - self.radius:
+                self.speed_y *= -1
+                # Add a small random variation to make gameplay more interesting
+                self.speed_y += random.uniform(-0.5, 0.5)
             
     def check_paddle_collision(self, paddle, is_left_paddle):
         """
@@ -105,7 +218,7 @@ class Ball:
             # Calculate bounce angle (-1 to 1) based on where the ball hit the paddle
             bounce_angle = normalized_relative_intersect_y * 0.8  # 0.8 limits the max angle
             
-            # Reverse x direction and apply the bounce angle to y
+            # Reverse x direction and apply the bounce angle
             self.speed_x = -self.speed_x
             
             # Make the ball faster with each hit, up to max_speed
@@ -139,6 +252,7 @@ class Ball:
         self.y = y
         self.rect.x = x - self.radius
         self.rect.y = y - self.radius
+        self.is_held = False
         
         # Reset speed but keep direction random
         self.speed_x = random.choice([-1, 1]) * 5
