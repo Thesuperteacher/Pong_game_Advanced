@@ -167,16 +167,22 @@ class StartScreen:
         for ball in self.balls:
             ball.draw(self.screen)
         
-        # Draw paddles (decorative)
+        # Draw paddles (decorative) make paddles move up and down with the mouse
         paddle_height = 80
         paddle_width = 10
+        mouse_y = pygame.mouse.get_pos()[1]
+        
+        # Left paddle
         pygame.draw.rect(self.screen, WHITE, 
-                         (20, SCREEN_HEIGHT // 2 - paddle_height // 2, 
+                         (20, mouse_y - paddle_height // 2, 
                           paddle_width, paddle_height))
+        
+        # Right paddle
         pygame.draw.rect(self.screen, WHITE, 
                          (SCREEN_WIDTH - 20 - paddle_width, 
-                          SCREEN_HEIGHT // 2 - paddle_height // 2, 
+                          mouse_y - paddle_height // 2, 
                           paddle_width, paddle_height))
+
         
         # Draw title with bounce effect
         title_y_offset = math.sin(self.title_bounce * 0.1) * 5
